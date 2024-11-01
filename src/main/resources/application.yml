@@ -32,3 +32,6 @@ management:
       exposure:
         include: "*"
 
+build:
+  version:
+
