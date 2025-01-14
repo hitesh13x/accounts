@@ -3,6 +3,7 @@ package com.eazybytes.accounts;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
 import com.eazybytes.accounts.dto.AccountsContactInfoDto;
 
@@ -33,6 +34,7 @@ import io.swagger.v3.oas.annotations.info.License;
 @EntityScan("com.eazybytes.accounts.model")*/
 @SpringBootApplication
 @EnableConfigurationProperties(value = {AccountsContactInfoDto.class})
+@EnableFeignClients
 public class AccountsApplication {
 
 	public static void main(String[] args) {
