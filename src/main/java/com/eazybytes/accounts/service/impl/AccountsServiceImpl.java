@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
+import com.eazybytes.accounts.dto.AccountsMsgDto;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import com.eazybytes.accounts.constants.AccountsConstants;
@@ -29,6 +31,7 @@ public class AccountsServiceImpl implements IAccountsService {
 
     private AccountsRepository accountsRepository;
     private CustomerRepository customerRepository;
+    private final StreamBridge streamBridge;
 
     @Override
     public void createAccount(CustomerDto customerDto) {
@@ -44,12 +47,22 @@ public class AccountsServiceImpl implements IAccountsService {
 
         customer.setCreatedAt(LocalDateTime.now());
         customer.setCreatedBy("Anonymous");
-        customerRepository.save(customer);
-        accountsRepository.save(createNewAccount(customer));
+        Customer savedCustomer = customerRepository.save(customer);
+        Accounts savedAccount = accountsRepository.save(createNewAccount(customer));
+
+        sendCommunication(savedAccount, savedCustomer);
+    }
+
+    private void sendCommunication(Accounts savedAccount, Customer savedCustomer) {
+        var accountsMsgDto = new AccountsMsgDto(savedAccount.getAccountNumber(), savedCustomer.getName(), savedCustomer.getEmail(),
+                savedCustomer.getMobileNumber());
+
+        log.info("Sending Communication request for the details: {}", accountsMsgDto);
+        boolean result = streamBridge.send("sendCommunication-out-0", accountsMsgDto);
+        log.info("Is the Communication request successfully triggered ? : {}", result);
     }
 
     /**
-     * 
      * @param customer - Customer Object
      * @return the new account details
      */
@@ -112,6 +125,20 @@ public class AccountsServiceImpl implements IAccountsService {
         accountsRepository.deleteByCustomerId(customer.getCustomerId());
         customerRepository.deleteById(customer.getCustomerId());
         return true;
+    }
+
+    @Override
+    public boolean updateCommunicationStatus(Long accountNumber) {
+        boolean isUpdated = false;
+        if (accountNumber != null) {
+            Accounts accounts = accountsRepository.findByAccountNumber(accountNumber).orElseThrow(
+                    () -> new ResourceNotFoundException("Account", "AccountNumber", accountNumber.toString())
+            );
+            accounts.setCommunicationSw(true);
+            accountsRepository.save(accounts);
+            isUpdated = true;
+        }
+        return isUpdated;
     }
 
 }
